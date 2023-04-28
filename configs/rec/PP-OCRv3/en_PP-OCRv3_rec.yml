@@ -34,6 +34,7 @@ Optimizer:
     factor: 3.0e-05
 
 
+# Architecture part modification of en_PP-OCRv3_rec.yml file
 Architecture:
   model_type: rec
   algorithm: SVTR
@@ -43,21 +44,13 @@ Architecture:
     scale: 0.5
     last_conv_stride: [1, 2]
     last_pool_type: avg
+  Neck:
+    name: SequenceEncoder
+    encoder_type: reshape
   Head:
-    name: MultiHead
-    head_list:
-      - CTCHead:
-          Neck:
-            name: svtr
-            dims: 64
-            depth: 2
-            hidden_dims: 120
-            use_guide: True
-          Head:
-            fc_decay: 0.00001
-      - SARHead:
-          enc_dim: 512
-          max_text_length: *max_text_length
+    name: CTCHead
+    mid_channels: 96
+    fc_decay: 0.00002
 
 Loss:
   name: MultiLoss
@@ -73,33 +66,25 @@ Metric:
   main_indicator: acc
   ignore_space: False
 
+# Train part modification of en_PP-OCRv3_rec.yml file
 Train:
   dataset:
-    name: SimpleDataSet
-    data_dir: ./train_data/
+    name: LMDBDataset
+    data_dir: MJ_ST
     ext_op_transform_idx: 1
-    label_file_list:
-    - ./train_data/train_list.txt
     transforms:
     - DecodeImage:
         img_mode: BGR
         channel_first: false
-    - RecConAug:
-        prob: 0.5
-        ext_data_num: 2
-        image_shape: [48, 320, 3]
-        max_text_length: *max_text_length
     - RecAug:
-    - MultiLabelEncode:
+    - CTCLabelEncode:
     - RecResizeImg:
-        image_shape: [3, 48, 320]
+        image_shape: [3, 32, 320]
     - KeepKeys:
         keep_keys:
         - image
-        - label_ctc
-        - label_sar
+        - label
         - length
-        - valid_ratio
   loader:
     shuffle: true
     batch_size_per_card: 128
